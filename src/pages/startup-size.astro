@@ -12,32 +12,23 @@ import Page from "$layouts/Page.astro";
 
     const ROBOTO_MONO = { family: "'Roboto Mono', monospace" };
 
-    const UNITS: Record<string, string> = {
-      time: "ms",
-      size: "kB",
-    };
-    const UNITS_CAST: Record<string, (n: number) => number> = {
-      time: (ns) => ns / 1e6,
-      size: (byte) => byte / 1e3,
-    };
-
     const ROOT = document.getElementById("root")!;
     const LOADING = document.getElementById("loading")!;
 
     const LINK_SRC =
       "https://github.com/js-benchmark-all/startup-size/tree/main/src/";
 
-    const DATA = await actions.getStartupSize.orThrow();
+    const DATA = await actions.getTimes.orThrow();
 
     LOADING.style.display = "none";
     ROOT.style.display = "block";
 
     // Colors for datasets (add more if needed)
     const COLORS = [
-      "rgba(0, 122, 204, 0.7)", // startup time - blue
-      "rgba(255, 99, 132, 0.7)", // minified size - red
-      "rgba(255, 159, 64, 0.7)", // gzipped size - orange
-      "rgba(75, 192, 192, 0.7)", // extra colors if needed
+      "rgba(0, 122, 204, 0.7)",
+      "rgba(255, 99, 132, 0.7)",
+      "rgba(255, 159, 64, 0.7)",
+      "rgba(75, 192, 192, 0.7)",
       "rgba(153, 102, 255, 0.7)",
     ];
 
@@ -77,21 +68,16 @@ import Page from "$layouts/Page.astro";
           // Map label to value for this metric
           const valueMap = new Map(rawData);
 
-          // Determine metric type (time or size)
-          const metricType = metric.split(" ").at(-1)!;
-
-          // Build data array aligned with allLabels
-          const data = allLabels.map((label) => {
-            const val = valueMap.get(label);
-            if (val === undefined) return 0; // or NaN if you prefer gaps
-            return UNITS_CAST[metricType]?.(val) ?? val;
-          });
-
           return {
-            label:
-              metric +
-              (UNITS[metricType] ? " (" + UNITS[metricType] + ")" : ""),
-            data,
+            label: metric + " (ms)",
+            // Build data array aligned with allLabels
+            data: allLabels.map((label) => {
+              const val = valueMap.get(label);
+              if (val == null) return Infinity;
+
+              // Cast ns to ms
+              return val / 1e6;
+            }),
             backgroundColor: COLORS[i % COLORS.length],
             borderColor: COLORS[i % COLORS.length].replace("0.7", "1"),
             borderWidth: 1,
@@ -143,10 +129,6 @@ import Page from "$layouts/Page.astro";
                 callbacks: {
                   label: (ctx) =>
                     ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
-                },
-                itemSort: (a, b) => {
-                  console.log(a, b);
-                  return a.datasetIndex - b.datasetIndex;
                 },
               },
             },

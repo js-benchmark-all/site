@@ -13,17 +13,17 @@ const cache = <T>(fn: () => Promise<T>, delay: number) => {
   return () => val ?? get();
 }
 
+const json = (link: string) => async () => (await fetch(link)).json();
+
 export const server = {
-  getStartupSize: defineAction({
+  getTimes: defineAction({
     handler: cache<
       Record<
         string,
         Record<string, Record<string, [string, number][]>>
       >
     >(
-      async () => (
-        await fetch("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results/index.json")
-      ).json(),
+      json("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results/index.json"),
       30000
     )
   })
