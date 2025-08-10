@@ -1,30 +1,37 @@
 import { defineAction } from 'astro:actions';
 
-const cache = <T>(fn: () => Promise<T>, delay: number) => {
+const RESULTS = "https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results";
+
+const cache = <T>(link: string, delay: number) => {
   let val: T;
   const unset = () => {
     val = null as any;
   }
   const get = async () => {
-    val = await fn();
+    val = await (await fetch(link)).json();
     setTimeout(unset, delay);
     return val;
   }
-  return () => val ?? get();
+  return defineAction({
+    handler: () => val ?? get()
+  });
 }
 
-const json = (link: string) => async () => (await fetch(link)).json();
-
 export const server = {
-  getTimes: defineAction({
-    handler: cache<
-      Record<
-        string,
-        Record<string, Record<string, [string, number][]>>
-      >
-    >(
-      json("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results/index.json"),
-      30000
-    )
-  })
+  getTimes: cache<
+    Record<
+      string,
+      Record<string, Record<string, [string, number][]>>
+    >
+  >(RESULTS + "/index.json", 30000),
+  getSizes: cache<
+    Record<
+      string,
+      {
+        name: string,
+        category: string,
+        size: Record<string, number>
+      }[]
+    >
+  >(RESULTS + "/size.json", 30000)
 }

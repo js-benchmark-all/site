@@ -11,6 +11,42 @@ import Page from "$layouts/Page.astro";
     import { actions } from "astro:actions";
 
     const ROBOTO_MONO = { family: "'Roboto Mono', monospace" };
+    const OPTIONS = {
+      indexAxis: "y",
+      scales: {
+        x: {
+          beginAtZero: true,
+          ticks: {
+            callback: (value: any) => +(+value).toFixed(2),
+            font: ROBOTO_MONO,
+          },
+        },
+        y: {
+          ticks: {
+            font: { size: 14, ...ROBOTO_MONO },
+          },
+        },
+      },
+      plugins: {
+        legend: {
+          display: true,
+          position: "top",
+          labels: {
+            font: ROBOTO_MONO,
+          },
+        },
+        tooltip: {
+          bodyFont: ROBOTO_MONO,
+          callbacks: {
+            label: (ctx: any) =>
+              ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
+          },
+        },
+      },
+      responsive: true,
+      maintainAspectRatio: false,
+      font: ROBOTO_MONO,
+    } as const;
 
     const ROOT = document.getElementById("root")!;
     const LOADING = document.getElementById("loading")!;
@@ -18,125 +54,94 @@ import Page from "$layouts/Page.astro";
     const LINK_SRC =
       "https://github.com/js-benchmark-all/startup-size/tree/main/src/";
 
-    const DATA = await actions.getTimes.orThrow();
-
     LOADING.style.display = "none";
     ROOT.style.display = "block";
 
-    // Colors for datasets (add more if needed)
-    const COLORS = [
-      "rgba(0, 122, 204, 0.7)",
-      "rgba(255, 99, 132, 0.7)",
-      "rgba(255, 159, 64, 0.7)",
-      "rgba(75, 192, 192, 0.7)",
-      "rgba(153, 102, 255, 0.7)",
-    ];
+    {
+      const DATA = await actions.getTimes.orThrow();
 
-    for (const runtime in DATA) {
-      const categories = DATA[runtime];
-
-      {
-        const runtimeHeader = document.createElement("h1");
-        runtimeHeader.textContent = runtime;
-        ROOT.appendChild(runtimeHeader);
-      }
-
-      for (const category in categories) {
-        const metrics = categories[category];
+      for (const runtime in DATA) {
+        const categories = DATA[runtime];
 
         {
-          const link = document.createElement("a");
-          link.href = LINK_SRC + category;
-          link.target = "__blank";
-
-          const categoryHeader = document.createElement("h2");
-          categoryHeader.textContent = category;
-          link.appendChild(categoryHeader);
-
-          ROOT.appendChild(link);
+          const runtimeHeader = document.createElement("h2");
+          runtimeHeader.textContent = runtime;
+          ROOT.appendChild(runtimeHeader);
         }
 
-        // Collect all unique labels (framework/validator names) across all metrics
-        const allLabels = Array.from(
-          new Set<string>(
-            Object.values(metrics).flatMap((item) => item.map((i) => i[0])),
-          ),
-        );
+        for (const category in categories) {
+          const metrics = categories[category];
 
-        // Prepare datasets for each metric
-        const datasets = Object.entries(metrics).map(([metric, rawData], i) => {
-          // Map label to value for this metric
-          const valueMap = new Map(rawData);
+          {
+            const link = document.createElement("a");
+            link.href = LINK_SRC + category;
+            link.target = "__blank";
 
-          return {
-            label: metric + " (ms)",
-            // Build data array aligned with allLabels
-            data: allLabels.map((label) => {
-              const val = valueMap.get(label);
-              if (val == null) return Infinity;
+            const categoryHeader = document.createElement("h3");
+            categoryHeader.textContent = category;
+            link.appendChild(categoryHeader);
 
-              // Cast ns to ms
-              return val / 1e6;
-            }),
-            backgroundColor: COLORS[i % COLORS.length],
-            borderColor: COLORS[i % COLORS.length].replace("0.7", "1"),
-            borderWidth: 1,
-          };
-        });
+            ROOT.appendChild(link);
+          }
 
-        // Create chart container
-        const section = document.createElement("section");
-        section.className = "chart-container";
+          // Collect all unique labels (framework/validator names) across all metrics
+          const allLabels = Array.from(
+            new Set<string>(
+              Object.values(metrics).flatMap((item) => item.map((i) => i[0])),
+            ),
+          );
 
-        const canvas = document.createElement("canvas");
-        canvas.id = `chart-${runtime.replace(/\W/g, "-")}-${category.replace(/\W/g, "-")}`;
-        section.appendChild(canvas);
+          // Prepare datasets for each metric
+          const datasets = Object.entries(metrics).map(
+            ([metric, rawData], i) => {
+              // Map label to value for this metric
+              const valueMap = new Map(rawData);
 
-        ROOT.appendChild(section);
+              return {
+                label: metric + " (ms)",
+                // Build data array aligned with allLabels
+                data: allLabels.map((label) => {
+                  const val = valueMap.get(label);
+                  if (val == null) return Infinity;
 
-        new Chart(canvas.getContext("2d")!, {
-          type: "bar",
-          data: {
-            labels: allLabels,
-            datasets,
-          },
-          options: {
-            indexAxis: "y",
-            scales: {
-              x: {
-                beginAtZero: true,
-                ticks: {
-                  callback: (value) => +(+value).toFixed(2),
-                  font: ROBOTO_MONO,
-                },
-              },
-              y: {
-                ticks: {
-                  font: { size: 14, ...ROBOTO_MONO },
-                },
-              },
+                  // Cast ns to ms
+                  return val / 1e6;
+                }),
+                borderWidth: 1,
+              };
             },
-            plugins: {
-              legend: {
-                display: true,
-                position: "top",
-                labels: {
-                  font: ROBOTO_MONO,
-                },
-              },
-              tooltip: {
-                bodyFont: ROBOTO_MONO,
-                callbacks: {
-                  label: (ctx) =>
-                    ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
-                },
-              },
+          );
+
+          // Create chart container
+          const section = document.createElement("section");
+          section.className = "chart-container";
+
+          const canvas = document.createElement("canvas");
+          canvas.id =
+            runtime.replace(/\W/g, "-") + "-" + category.replace(/\W/g, "-");
+          section.appendChild(canvas);
+
+          ROOT.appendChild(section);
+
+          new Chart(canvas.getContext("2d")!, {
+            type: "bar",
+            data: {
+              labels: allLabels,
+              datasets,
             },
-            responsive: true,
-            maintainAspectRatio: false,
-            font: ROBOTO_MONO,
-          },
-        });
+            options: OPTIONS,
+          });
+        }
+      }
+
+      {
+        const DATA = await actions.getSizes.orThrow();
+
+        {
+          const header = document.createElement("h2");
+          header.textContent = "Size";
+          ROOT.appendChild(header);
+        }
       }
     }
   </script>
