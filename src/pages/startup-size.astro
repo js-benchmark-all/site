@@ -54,38 +54,49 @@ import Page from "$layouts/Page.astro";
     const LINK_SRC =
       "https://github.com/js-benchmark-all/startup-size/tree/main/src/";
 
-    LOADING.style.display = "none";
-    ROOT.style.display = "block";
+    const createHeader = (text: string, type: "h2" | "h3") => {
+      const header = document.createElement(type);
+      header.textContent = text;
+      ROOT.appendChild(header);
+      return header;
+    };
+
+    const createCategoryHeader = (cat: string) => {
+      const link = document.createElement("a");
+
+      link.href = LINK_SRC + cat;
+      link.target = "__blank";
+      link.appendChild(createHeader(cat, "h3"));
+      ROOT.appendChild(link);
+
+      return link;
+    };
+
+    const createChart = (id: string) => {
+      const section = document.createElement("section");
+      section.className = "chart-container";
+
+      const canvas = document.createElement("canvas");
+      canvas.id = id;
+      section.appendChild(canvas);
+
+      ROOT.appendChild(section);
+      return canvas;
+    };
 
     {
       const DATA = await actions.getTimes.orThrow();
 
       for (const runtime in DATA) {
         const categories = DATA[runtime];
-
-        {
-          const runtimeHeader = document.createElement("h2");
-          runtimeHeader.textContent = runtime;
-          ROOT.appendChild(runtimeHeader);
-        }
+        createHeader(runtime, "h2");
 
         for (const category in categories) {
           const metrics = categories[category];
-
-          {
-            const link = document.createElement("a");
-            link.href = LINK_SRC + category;
-            link.target = "__blank";
-
-            const categoryHeader = document.createElement("h3");
-            categoryHeader.textContent = category;
-            link.appendChild(categoryHeader);
-
-            ROOT.appendChild(link);
-          }
+          createCategoryHeader(category);
 
           // Collect all unique labels (framework/validator names) across all metrics
-          const allLabels = Array.from(
+          const labels = Array.from(
             new Set<string>(
               Object.values(metrics).flatMap((item) => item.map((i) => i[0])),
             ),
@@ -99,8 +110,8 @@ import Page from "$layouts/Page.astro";
 
               return {
                 label: metric + " (ms)",
-                // Build data array aligned with allLabels
-                data: allLabels.map((label) => {
+                // Build data array aligned with labels
+                data: labels.map((label) => {
                   const val = valueMap.get(label);
                   if (val == null) return Infinity;
 
@@ -112,37 +123,61 @@ import Page from "$layouts/Page.astro";
             },
           );
 
-          // Create chart container
-          const section = document.createElement("section");
-          section.className = "chart-container";
-
-          const canvas = document.createElement("canvas");
-          canvas.id =
-            runtime.replace(/\W/g, "-") + "-" + category.replace(/\W/g, "-");
-          section.appendChild(canvas);
-
-          ROOT.appendChild(section);
-
-          new Chart(canvas.getContext("2d")!, {
-            type: "bar",
-            data: {
-              labels: allLabels,
-              datasets,
+          new Chart(
+            createChart(
+              runtime.replace(/\W/g, "-") + "-" + category.replace(/\W/g, "-"),
+            ).getContext("2d")!,
+            {
+              type: "bar",
+              data: {
+                labels,
+                datasets,
+              },
+              options: OPTIONS,
             },
-            options: OPTIONS,
-          });
+          );
         }
       }
 
       {
-        const DATA = await actions.getSizes.orThrow();
+        createHeader("Size", "h2");
 
-        {
-          const header = document.createElement("h2");
-          header.textContent = "Size";
-          ROOT.appendChild(header);
+        const DATA = Object.groupBy(
+          await actions.getSizes.orThrow(),
+          (o) => o.category,
+        );
+
+        for (const category in DATA) {
+          const data = DATA[category]!.sort(
+            (a, b) => a.size.minified - b.size.minified,
+          );
+          createCategoryHeader(category);
+
+          const labels = data.map((item) => item.name);
+          const datasets = Object.keys(data[0].size).map((key) => ({
+            label: key + " (kB)",
+            data: data.map((item) => item.size[key] / 1e3),
+            borderWidth: 1,
+          }));
+
+          new Chart(
+            createChart("size-" + category.replace(/\W/g, "-")).getContext(
+              "2d",
+            )!,
+            {
+              type: "bar",
+              data: {
+                labels,
+                datasets,
+              },
+              options: OPTIONS,
+            },
+          );
         }
       }
+
+      LOADING.style.display = "none";
+      ROOT.style.display = "block";
     }
   </script>
 
@@ -152,6 +187,10 @@ import Page from "$layouts/Page.astro";
       background: #f9f9f9;
       color: #333;
       text-align: center;
+    }
+
+    #root {
+      display: none;
     }
 
     #loading {

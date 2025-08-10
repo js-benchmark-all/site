@@ -25,13 +25,10 @@ export const server = {
     >
   >(RESULTS + "/index.json", 30000),
   getSizes: cache<
-    Record<
-      string,
-      {
-        name: string,
-        category: string,
-        size: Record<string, number>
-      }[]
-    >
+    {
+      name: string,
+      category: string,
+      size: Record<string, number>
+    }[]
   >(RESULTS + "/size.json", 30000)
 }
