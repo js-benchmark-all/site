@@ -1,0 +1,211 @@
+---
+import Page from "$layouts/Page.astro";
+---
+
+<Page title="Benchmark results - startup & size">
+  <div id="loading">Loading benchmark data...</div>
+  <div id="root"></div>
+
+  <script>
+    import Chart from "chart.js/auto";
+    import { actions } from "astro:actions";
+
+    const ROBOTO_MONO = { family: "'Roboto Mono', monospace" };
+
+    const UNITS: Record<string, string> = {
+      time: "ms",
+      size: "kB",
+    };
+    const UNITS_CAST: Record<string, (n: number) => number> = {
+      time: (ns) => ns / 1e6,
+      size: (byte) => byte / 1e3,
+    };
+
+    const ROOT = document.getElementById("root")!;
+    const LOADING = document.getElementById("loading")!;
+
+    const LINK_SRC =
+      "https://github.com/js-benchmark-all/startup-size/tree/main/src/";
+
+    const DATA = await actions.getStartupSize.orThrow();
+
+    LOADING.style.display = "none";
+    ROOT.style.display = "block";
+
+    // Colors for datasets (add more if needed)
+    const COLORS = [
+      "rgba(0, 122, 204, 0.7)", // startup time - blue
+      "rgba(255, 99, 132, 0.7)", // minified size - red
+      "rgba(255, 159, 64, 0.7)", // gzipped size - orange
+      "rgba(75, 192, 192, 0.7)", // extra colors if needed
+      "rgba(153, 102, 255, 0.7)",
+    ];
+
+    for (const runtime in DATA) {
+      const categories = DATA[runtime];
+
+      {
+        const runtimeHeader = document.createElement("h1");
+        runtimeHeader.textContent = runtime;
+        ROOT.appendChild(runtimeHeader);
+      }
+
+      for (const category in categories) {
+        const metrics = categories[category];
+
+        {
+          const link = document.createElement("a");
+          link.href = LINK_SRC + category;
+          link.target = "__blank";
+
+          const categoryHeader = document.createElement("h2");
+          categoryHeader.textContent = category;
+          link.appendChild(categoryHeader);
+
+          ROOT.appendChild(link);
+        }
+
+        // Collect all unique labels (framework/validator names) across all metrics
+        const allLabels = Array.from(
+          new Set<string>(
+            Object.values(metrics).flatMap((item) => item.map((i) => i[0])),
+          ),
+        );
+
+        // Prepare datasets for each metric
+        const datasets = Object.entries(metrics).map(([metric, rawData], i) => {
+          // Map label to value for this metric
+          const valueMap = new Map(rawData);
+
+          // Determine metric type (time or size)
+          const metricType = metric.split(" ").at(-1)!;
+
+          // Build data array aligned with allLabels
+          const data = allLabels.map((label) => {
+            const val = valueMap.get(label);
+            if (val === undefined) return 0; // or NaN if you prefer gaps
+            return UNITS_CAST[metricType]?.(val) ?? val;
+          });
+
+          return {
+            label:
+              metric +
+              (UNITS[metricType] ? " (" + UNITS[metricType] + ")" : ""),
+            data,
+            backgroundColor: COLORS[i % COLORS.length],
+            borderColor: COLORS[i % COLORS.length].replace("0.7", "1"),
+            borderWidth: 1,
+          };
+        });
+
+        // Create chart container
+        const section = document.createElement("section");
+        section.className = "chart-container";
+
+        const canvas = document.createElement("canvas");
+        canvas.id = `chart-${runtime.replace(/\W/g, "-")}-${category.replace(/\W/g, "-")}`;
+        section.appendChild(canvas);
+
+        ROOT.appendChild(section);
+
+        new Chart(canvas.getContext("2d")!, {
+          type: "bar",
+          data: {
+            labels: allLabels,
+            datasets,
+          },
+          options: {
+            indexAxis: "y",
+            scales: {
+              x: {
+                beginAtZero: true,
+                ticks: {
+                  callback: (value) => +(+value).toFixed(2),
+                  font: ROBOTO_MONO,
+                },
+              },
+              y: {
+                ticks: {
+                  font: { size: 14, ...ROBOTO_MONO },
+                },
+              },
+            },
+            plugins: {
+              legend: {
+                display: true,
+                position: "top",
+                labels: {
+                  font: ROBOTO_MONO,
+                },
+              },
+              tooltip: {
+                bodyFont: ROBOTO_MONO,
+                callbacks: {
+                  label: (ctx) =>
+                    ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
+                },
+                itemSort: (a, b) => {
+                  console.log(a, b);
+                  return a.datasetIndex - b.datasetIndex;
+                },
+              },
+            },
+            responsive: true,
+            maintainAspectRatio: false,
+            font: ROBOTO_MONO,
+          },
+        });
+      }
+    }
+  </script>
+
+  <style is:global>
+    body {
+      margin: 20px;
+      background: #f9f9f9;
+      color: #333;
+      text-align: center;
+    }
+
+    #loading {
+      font-size: 1.5em;
+      text-align: center;
+      margin-top: 100px;
+      color: #666;
+    }
+
+    .chart-container {
+      width: 90%;
+      max-width: 900px;
+      margin: 20px auto 40px auto;
+      padding: 20px;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    canvas {
+      height: 400px !important;
+      display: inline-block;
+    }
+
+    h1 {
+      font-weight: 700;
+      font-size: 2.5em;
+      margin-top: 1em;
+      margin-bottom: 0.5em;
+      padding-bottom: 0.2em;
+      text-align: center;
+    }
+
+    h2 {
+      font-weight: 600;
+      font-size: 1.8em;
+      margin-top: 1.5em;
+      margin-bottom: 0.5em;
+      padding-bottom: 0.1em;
+      text-align: center;
+    }
+  </style>
+</Page>
