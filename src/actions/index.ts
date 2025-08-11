@@ -2,13 +2,13 @@ import { defineAction } from 'astro:actions';
 
 const RESULTS = "https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results";
 
-const cache = <T>(link: string, delay: number) => {
+const cache = <T>(f: () => Promise<T>, delay: number) => {
   let val: T;
   const unset = () => {
     val = null as any;
   }
   const get = async () => {
-    val = await (await fetch(link)).json();
+    val = await f();
     setTimeout(unset, delay);
     return val;
   }
@@ -17,18 +17,27 @@ const cache = <T>(link: string, delay: number) => {
   });
 }
 
+const getJSON = async (link: string) => (await fetch(link)).json();
+
 export const server = {
-  getTimes: cache<
-    Record<
+  getStartupSize: cache<{
+    startup: Record<
       string,
       Record<string, Record<string, [string, number][]>>
-    >
-  >(RESULTS + "/index.json", 30000),
-  getSizes: cache<
-    {
+    >,
+    size: {
       name: string,
       category: string,
       size: Record<string, number>
     }[]
-  >(RESULTS + "/size.json", 30000)
+  }>(async () => {
+    const results = await Promise.all([
+      getJSON(RESULTS + "/index.json"),
+      getJSON(RESULTS + "/size.json")
+    ]);
+    return {
+      startup: results[0],
+      size: results[1]
+    }
+  }, 30000)
 }

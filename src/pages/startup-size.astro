@@ -51,8 +51,7 @@ import Page from "$layouts/Page.astro";
     const ROOT = document.getElementById("root")!;
     const LOADING = document.getElementById("loading")!;
 
-    const LINK_SRC =
-      "https://github.com/js-benchmark-all/startup-size/tree/main/src/";
+    const RESULTS = await actions.getStartupSize.orThrow();
 
     const createHeader = (text: string, type: "h2" | "h3") => {
       const header = document.createElement(type);
@@ -64,7 +63,8 @@ import Page from "$layouts/Page.astro";
     const createCategoryHeader = (cat: string) => {
       const link = document.createElement("a");
 
-      link.href = LINK_SRC + cat;
+      link.href =
+        "https://github.com/js-benchmark-all/startup-size/tree/main/src/" + cat;
       link.target = "__blank";
       link.appendChild(createHeader(cat, "h3"));
       ROOT.appendChild(link);
@@ -85,7 +85,7 @@ import Page from "$layouts/Page.astro";
     };
 
     {
-      const DATA = await actions.getTimes.orThrow();
+      const DATA = RESULTS.startup;
 
       for (const runtime in DATA) {
         const categories = DATA[runtime];
@@ -142,10 +142,7 @@ import Page from "$layouts/Page.astro";
       {
         createHeader("Size", "h2");
 
-        const DATA = Object.groupBy(
-          await actions.getSizes.orThrow(),
-          (o) => o.category,
-        );
+        const DATA = Object.groupBy(RESULTS.size, (o) => o.category);
 
         for (const category in DATA) {
           const data = DATA[category]!.sort(
