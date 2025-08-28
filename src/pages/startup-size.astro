@@ -51,25 +51,11 @@ import Page from "$layouts/Page.astro";
     const ROOT = document.getElementById("root")!;
     const LOADING = document.getElementById("loading")!;
 
-    const RESULTS = await actions.getStartupSize.orThrow();
-
-    const createHeader = (text: string, type: "h2" | "h3") => {
-      const header = document.createElement(type);
+    const createHeader = (text: string, type: number) => {
+      const header = document.createElement("h" + type);
       header.textContent = text;
       ROOT.appendChild(header);
       return header;
-    };
-
-    const createCategoryHeader = (cat: string) => {
-      const link = document.createElement("a");
-
-      link.href =
-        "https://github.com/js-benchmark-all/startup-size/tree/main/src/" + cat;
-      link.target = "__blank";
-      link.appendChild(createHeader(cat, "h3"));
-      ROOT.appendChild(link);
-
-      return link;
     };
 
     const createChart = (id: string) => {
@@ -84,98 +70,27 @@ import Page from "$layouts/Page.astro";
       return canvas;
     };
 
-    {
-      const DATA = RESULTS.startup;
-
-      for (const runtime in DATA) {
-        const categories = DATA[runtime];
-        createHeader(runtime, "h2");
-
-        for (const category in categories) {
-          const metrics = categories[category];
-          createCategoryHeader(category);
-
-          // Collect all unique labels (framework/validator names) across all metrics
-          const labels = Array.from(
-            new Set<string>(
-              Object.values(metrics).flatMap((item) => item.map((i) => i[0])),
-            ),
-          );
-
-          // Prepare datasets for each metric
-          const datasets = Object.entries(metrics).map(
-            ([metric, rawData], i) => {
-              // Map label to value for this metric
-              const valueMap = new Map(rawData);
-
-              return {
-                label: metric + " (ms)",
-                // Build data array aligned with labels
-                data: labels.map((label) => {
-                  const val = valueMap.get(label);
-                  if (val == null) return Infinity;
-
-                  // Cast ns to ms
-                  return val / 1e6;
-                }),
-                borderWidth: 1,
-              };
-            },
-          );
-
-          new Chart(
-            createChart(
-              runtime.replace(/\W/g, "-") + "-" + category.replace(/\W/g, "-"),
-            ).getContext("2d")!,
-            {
-              type: "bar",
-              data: {
-                labels,
-                datasets,
-              },
-              options: OPTIONS,
-            },
-          );
+    const load = (data: any, prev: string[]) => {
+      if (Array.isArray(data.labels) && Array.isArray(data.datasets))
+        new Chart(
+          createChart(prev.join("-").replace(/\W/g, "-")).getContext("2d")!,
+          {
+            type: "bar",
+            data,
+            options: OPTIONS,
+          },
+        );
+      else
+        for (const name in data) {
+          createHeader(name, prev.length + 1);
+          load(data[name], prev.concat([name]));
         }
-      }
+    };
 
-      {
-        createHeader("Size", "h2");
+    load(await actions.startupSize.orThrow(), []);
 
-        const DATA = Object.groupBy(RESULTS.size, (o) => o.category);
-
-        for (const category in DATA) {
-          const data = DATA[category]!.sort(
-            (a, b) => a.size.minified - b.size.minified,
-          );
-          createCategoryHeader(category);
-
-          const labels = data.map((item) => item.name);
-          const datasets = Object.keys(data[0].size).map((key) => ({
-            label: key + " (kB)",
-            data: data.map((item) => item.size[key] / 1e3),
-            borderWidth: 1,
-          }));
-
-          new Chart(
-            createChart("size-" + category.replace(/\W/g, "-")).getContext(
-              "2d",
-            )!,
-            {
-              type: "bar",
-              data: {
-                labels,
-                datasets,
-              },
-              options: OPTIONS,
-            },
-          );
-        }
-      }
-
-      LOADING.style.display = "none";
-      ROOT.style.display = "block";
-    }
+    LOADING.style.display = "none";
+    ROOT.style.display = "block";
   </script>
 
   <style is:global>

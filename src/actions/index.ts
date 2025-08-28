@@ -18,24 +18,5 @@ const cache = <T>(f: () => Promise<T>, delay: number) => {
 const getJSON = async (link: string) => (await fetch(link)).json();
 
 export const server = {
-  getStartupSize: cache(async () => {
-    const RESULTS = "https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/main/.results";
-
-    const results = await Promise.all([
-      getJSON(RESULTS + "/index.json"),
-      getJSON(RESULTS + "/size.json")
-    ]);
-
-    return {
-      startup: results[0] as Record<
-        string,
-        Record<string, Record<string, [string, number][]>>
-      >,
-      size: results[1] as {
-        name: string,
-        category: string,
-        size: Record<string, number>
-      }[]
-    };
-  }, 30000)
+  startupSize: cache<Record<string, any>>(async () => (await fetch("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json")).json(), 20000)
 }
