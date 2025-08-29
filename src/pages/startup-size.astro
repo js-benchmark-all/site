@@ -80,11 +80,12 @@ import Page from "$layouts/Page.astro";
             options: OPTIONS,
           },
         );
-      else
+      else {
         for (const name in data) {
           createHeader(name, prev.length + 1);
           load(data[name], prev.concat([name]));
         }
+      }
     };
 
     load(await actions.startupSize.orThrow(), []);
@@ -132,8 +133,6 @@ import Page from "$layouts/Page.astro";
       font-weight: 700;
       font-size: 2.5em;
       margin-top: 1em;
-      margin-bottom: 0.5em;
-      padding-bottom: 0.2em;
       text-align: center;
     }
 
