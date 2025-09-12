@@ -10,7 +10,7 @@ import Page from "$layouts/Page.astro";
     import Chart from "chart.js/auto";
     import { actions } from "astro:actions";
 
-    const ROBOTO_MONO = { family: "'Roboto Mono', monospace" };
+    const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 13 };
     const OPTIONS = {
       indexAxis: "y",
       scales: {
@@ -23,7 +23,7 @@ import Page from "$layouts/Page.astro";
         },
         y: {
           ticks: {
-            font: { size: 13, ...ROBOTO_MONO },
+            font: ROBOTO_MONO,
           },
         },
       },
