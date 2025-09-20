@@ -18,5 +18,5 @@ const cache = <T>(f: () => Promise<T>, delay: number) => {
 const getJSON = async (link: string) => (await fetch(link)).json();
 
 export const server = {
-  startupSize: cache<Record<string, any>>(() => getJSON("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json"), 15000)
+  startupSize: cache<Record<string, any>>(() => getJSON("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json"), 10000)
 }
