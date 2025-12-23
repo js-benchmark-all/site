@@ -96,17 +96,12 @@ import Page from "$layouts/Page.astro";
       }
     };
 
+    // Correctly load the hash after load
     {
-      const url = new URL(location.href);
-      const hash = url.hash;
-
-      url.hash = "";
-      location.href = url.href;
-
+      const hash = location.hash;
+      location.hash = "_";
       load(await actions.startupSize.orThrow(), []);
-
-      url.hash = hash;
-      location.href = url.href;
+      if (hash !== "") location.hash = hash;
     }
 
     LOADING.style.display = "none";
