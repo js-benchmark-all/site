@@ -11,7 +11,7 @@ import Page from "$layouts/Page.astro";
     import * as v from "valibot";
     import { actions } from "astro:actions";
 
-    const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 16 };
+    const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 13 };
     const OPTIONS = {
       indexAxis: "y",
       scales: {
@@ -67,18 +67,6 @@ import Page from "$layouts/Page.astro";
       return header;
     };
 
-    const createChart = (id: string) => {
-      const section = document.createElement("section");
-      section.className = "chart-container";
-
-      const canvas = document.createElement("canvas");
-      canvas.id = id;
-      section.appendChild(canvas);
-
-      ROOT.appendChild(section);
-      return canvas;
-    };
-
     const ChartData = v.object({
       labels: v.array(v.string()),
       datasets: v.array(
@@ -90,16 +78,23 @@ import Page from "$layouts/Page.astro";
     });
 
     const load = (data: any, prev: string[]) => {
-      if (v.is(ChartData, data))
-        new Chart(
-          createChart(prev.join("-").replace(/\W/g, "-")).getContext("2d")!,
-          {
-            type: "bar",
-            data,
-            options: OPTIONS,
-          },
-        );
-      else {
+      if (v.is(ChartData, data)) {
+        const section = document.createElement("section");
+        section.className = "chart-container";
+
+        const canvas = document.createElement("canvas");
+        section.appendChild(canvas);
+
+        ROOT.appendChild(section);
+
+        new Chart(canvas.getContext("2d")!, {
+          type: "bar",
+          data,
+          options: OPTIONS,
+        });
+
+        section.style.minHeight = `${5 * data.labels.length}rem`;
+      } else {
         for (const name in data) {
           createHeader(name, prev.length + 1);
           load(data[name], prev.concat([name]));
@@ -132,15 +127,15 @@ import Page from "$layouts/Page.astro";
     }
 
     #loading {
-      font-size: 1.5em;
+      font-size: 1.5rem;
       text-align: center;
       margin-top: 100px;
       color: #666;
     }
 
     .chart-container {
-      width: 95%;
-      max-width: 96rem;
+      width: 92%;
+      max-width: 100rem;
       margin: 20px auto 40px auto;
       padding: 20px;
       background: #fff;
@@ -155,7 +150,7 @@ import Page from "$layouts/Page.astro";
 
     h1 {
       font-weight: 700;
-      font-size: 3em;
+      font-size: 2.7rem;
       margin-top: 1em;
       text-align: center;
       cursor: pointer;
@@ -163,7 +158,7 @@ import Page from "$layouts/Page.astro";
 
     h2 {
       font-weight: 600;
-      font-size: 2.4em;
+      font-size: 2rem;
       margin-top: 1.5em;
       margin-bottom: 0.5em;
       padding-bottom: 0.1em;
@@ -172,7 +167,7 @@ import Page from "$layouts/Page.astro";
     }
 
     h3 {
-      font-size: 1.5em;
+      font-size: 1.4rem;
       margin-top: 1.7em;
     }
   </style>
