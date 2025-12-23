@@ -8,9 +8,10 @@ import Page from "$layouts/Page.astro";
 
   <script>
     import Chart from "chart.js/auto";
+    import * as v from "valibot";
     import { actions } from "astro:actions";
 
-    const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 13 };
+    const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 16 };
     const OPTIONS = {
       indexAxis: "y",
       scales: {
@@ -78,8 +79,18 @@ import Page from "$layouts/Page.astro";
       return canvas;
     };
 
+    const ChartData = v.object({
+      labels: v.array(v.string()),
+      datasets: v.array(
+        v.object({
+          label: v.string(),
+          data: v.array(v.number()),
+        }),
+      ),
+    });
+
     const load = (data: any, prev: string[]) => {
-      if (Array.isArray(data.labels) && Array.isArray(data.datasets))
+      if (v.is(ChartData, data))
         new Chart(
           createChart(prev.join("-").replace(/\W/g, "-")).getContext("2d")!,
           {
@@ -128,8 +139,8 @@ import Page from "$layouts/Page.astro";
     }
 
     .chart-container {
-      width: 90%;
-      max-width: 1100px;
+      width: 95%;
+      max-width: 96rem;
       margin: 20px auto 40px auto;
       padding: 20px;
       background: #fff;
@@ -139,13 +150,12 @@ import Page from "$layouts/Page.astro";
     }
 
     canvas {
-      height: 400px !important;
       display: inline-block;
     }
 
     h1 {
       font-weight: 700;
-      font-size: 2.5em;
+      font-size: 3em;
       margin-top: 1em;
       text-align: center;
       cursor: pointer;
@@ -153,12 +163,17 @@ import Page from "$layouts/Page.astro";
 
     h2 {
       font-weight: 600;
-      font-size: 1.8em;
+      font-size: 2.4em;
       margin-top: 1.5em;
       margin-bottom: 0.5em;
       padding-bottom: 0.1em;
       text-align: center;
       cursor: pointer;
+    }
+
+    h3 {
+      font-size: 1.5em;
+      margin-top: 1.7em;
     }
   </style>
 </Page>

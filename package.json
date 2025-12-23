@@ -12,6 +12,7 @@
     "@astrojs/cloudflare": "^12.6.3",
     "astro": "^5.12.9",
     "chart.js": "^4.5.0",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.2",
+    "valibot": "^1.2.0"
   }
 }
