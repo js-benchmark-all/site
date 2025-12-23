@@ -96,7 +96,18 @@ import Page from "$layouts/Page.astro";
       }
     };
 
-    load(await actions.startupSize.orThrow(), []);
+    {
+      const url = new URL(location.href);
+      const hash = url.hash;
+
+      url.hash = "";
+      location.href = url.href;
+
+      load(await actions.startupSize.orThrow(), []);
+
+      url.hash = hash;
+      location.href = url.href;
+    }
 
     LOADING.style.display = "none";
     ROOT.style.display = "block";
