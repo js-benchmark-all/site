@@ -51,10 +51,12 @@ import Page from "$layouts/Page.astro";
     const ROOT = document.getElementById("root")!;
     const LOADING = document.getElementById("loading")!;
 
+    let currentID = 0;
+
     const createHeader = (text: string, type: number) => {
       const header = document.createElement("h" + type);
       header.textContent = text;
-      header.id = encodeURIComponent(text.replaceAll(" ", "-"));
+      header.id = "hd" + currentID++;
       header.onclick = () => {
         const currentURL = new URL(location.href);
         currentURL.hash = header.id;
