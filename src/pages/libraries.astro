@@ -54,6 +54,12 @@ import Page from "$layouts/Page.astro";
     const createHeader = (text: string, type: number) => {
       const header = document.createElement("h" + type);
       header.textContent = text;
+      header.id = encodeURIComponent(text.replaceAll(" ", "-"));
+      header.onclick = () => {
+        const currentURL = new URL(location.href);
+        currentURL.hash = header.id;
+        location.href = currentURL.href;
+      };
       ROOT.appendChild(header);
       return header;
     };
@@ -134,6 +140,7 @@ import Page from "$layouts/Page.astro";
       font-size: 2.5em;
       margin-top: 1em;
       text-align: center;
+      cursor: pointer;
     }
 
     h2 {
@@ -143,6 +150,7 @@ import Page from "$layouts/Page.astro";
       margin-bottom: 0.5em;
       padding-bottom: 0.1em;
       text-align: center;
+      cursor: pointer;
     }
   </style>
 </Page>
