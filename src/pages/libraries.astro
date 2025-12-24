@@ -85,15 +85,21 @@ import Page from "$layouts/Page.astro";
         const canvas = document.createElement("canvas");
         section.appendChild(canvas);
 
-        ROOT.appendChild(section);
-
-        new Chart(canvas.getContext("2d")!, {
-          type: "bar",
-          data,
-          options: OPTIONS,
-        });
-
         section.style.minHeight = `${5 * data.labels.length}rem`;
+
+        // Lazy render
+        new IntersectionObserver((entries, ob) => {
+          if (entries[0].isIntersecting) {
+            ob.unobserve(entries[0].target);
+            new Chart(canvas.getContext("2d")!, {
+              type: "bar",
+              data,
+              options: OPTIONS,
+            });
+          }
+        }).observe(canvas);
+
+        ROOT.appendChild(section);
       } else {
         for (const name in data) {
           createHeader(name, prev.length + 1);
@@ -148,12 +154,17 @@ import Page from "$layouts/Page.astro";
       display: inline-block;
     }
 
+    h1,
+    h2,
+    h3 {
+      cursor: pointer;
+    }
+
     h1 {
       font-weight: 700;
       font-size: 2.7rem;
       margin-top: 1em;
       text-align: center;
-      cursor: pointer;
     }
 
     h2 {
@@ -163,7 +174,6 @@ import Page from "$layouts/Page.astro";
       margin-bottom: 0.5em;
       padding-bottom: 0.1em;
       text-align: center;
-      cursor: pointer;
     }
 
     h3 {
