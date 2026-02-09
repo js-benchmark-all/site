@@ -9,7 +9,6 @@ import Page from "$layouts/Page.astro";
   <script>
     import Chart from "chart.js/auto";
     import * as v from "valibot";
-    import { actions } from "astro:actions";
 
     const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 13 };
     const OPTIONS = {
@@ -49,22 +48,25 @@ import Page from "$layouts/Page.astro";
       font: ROBOTO_MONO,
     } as const;
 
-    const ROOT = document.getElementById("root")!;
-    const LOADING = document.getElementById("loading")!;
-
-    let currentID = 0;
-
-    const createHeader = (text: string, type: number) => {
-      const header = document.createElement("h" + type);
-      header.textContent = text;
-      header.id = "hd" + currentID++;
-      header.onclick = () => {
-        const currentURL = new URL(location.href);
-        currentURL.hash = header.id;
-        location.href = currentURL.href;
-      };
-      ROOT.appendChild(header);
-      return header;
+    const createDetails = (
+      root: HTMLElement,
+      text: string,
+      type: number,
+    ): HTMLDetailsElement => {
+      const details = document.createElement("details");
+      details.open = true;
+      {
+        const summary = document.createElement("summary");
+        {
+          const header = document.createElement("h" + type);
+          header.textContent = text;
+          header.id = `hd${type}${text.toLowerCase().replace(/[/ _]/g, "-")}`;
+          summary.appendChild(header);
+        }
+        details.appendChild(summary);
+      }
+      root.appendChild(details);
+      return details;
     };
 
     const ChartData = v.object({
@@ -77,7 +79,7 @@ import Page from "$layouts/Page.astro";
       ),
     });
 
-    const load = (data: any, prev: string[]) => {
+    const load = (root: HTMLElement, data: any, prev: string[]) => {
       if (v.is(ChartData, data)) {
         const section = document.createElement("section");
         section.className = "chart-container";
@@ -88,36 +90,54 @@ import Page from "$layouts/Page.astro";
         section.style.minHeight = `${5 * data.labels.length}rem`;
 
         // Lazy render
-        new IntersectionObserver((entries, ob) => {
-          if (entries[0].isIntersecting) {
-            ob.unobserve(entries[0].target);
-            new Chart(canvas.getContext("2d")!, {
-              type: "bar",
-              data,
-              options: OPTIONS,
-            });
-          }
-        }).observe(canvas);
+        {
+          let chart: Chart;
+          let isRunning = false;
 
-        ROOT.appendChild(section);
-      } else {
-        for (const name in data) {
-          createHeader(name, prev.length + 1);
-          load(data[name], prev.concat([name]));
+          new IntersectionObserver((entries) => {
+            if (entries[0].isIntersecting) {
+              isRunning = true;
+
+              if (chart != null) chart.render();
+              else
+                chart = new Chart(canvas.getContext("2d")!, {
+                  type: "bar",
+                  data,
+                  options: OPTIONS,
+                });
+            } else if (isRunning) {
+              isRunning = false;
+              chart!.stop();
+            }
+          }).observe(canvas);
         }
+
+        root.appendChild(section);
+      } else {
+        for (const name in data)
+          load(
+            createDetails(root, name, prev.length + 1),
+            data[name],
+            prev.concat([name]),
+          );
       }
     };
 
-    // Correctly load the hash after load
     {
-      const hash = location.hash;
-      location.hash = "_";
-      load(await actions.startupSize.orThrow(), []);
-      if (hash !== "") location.hash = hash;
-    }
+      const ROOT = document.getElementById("root")!;
+      const LOADING = document.getElementById("loading")!;
 
-    LOADING.style.display = "none";
-    ROOT.style.display = "block";
+      // Correctly load the hash after load
+      {
+        const hash = location.hash;
+        location.hash = "_";
+        load(ROOT, await (await fetch("/api/libraries")).json(), []);
+        if (hash !== "") location.hash = hash;
+      }
+
+      LOADING.style.display = "none";
+      ROOT.style.display = "block";
+    }
   </script>
 
   <style is:global>
@@ -143,8 +163,7 @@ import Page from "$layouts/Page.astro";
       width: 92%;
       max-width: 100rem;
       margin: 20px auto 40px auto;
-      padding: 20px;
-      background: #fff;
+      padding: 15px;
       box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       border-radius: 8px;
       text-align: center;
@@ -154,31 +173,38 @@ import Page from "$layouts/Page.astro";
       display: inline-block;
     }
 
+    summary::marker {
+      content: "";
+      display: none;
+    }
+
+    details {
+      padding: 0.3rem 2rem 0 2rem;
+      margin-bottom: 2rem;
+    }
+
     h1,
     h2,
-    h3 {
+    h3,
+    h4 {
       cursor: pointer;
+      user-select: none;
     }
 
     h1 {
       font-weight: 700;
       font-size: 2.7rem;
-      margin-top: 1em;
       text-align: center;
     }
 
     h2 {
       font-weight: 600;
       font-size: 2rem;
-      margin-top: 1.5em;
-      margin-bottom: 0.5em;
-      padding-bottom: 0.1em;
       text-align: center;
     }
 
     h3 {
       font-size: 1.4rem;
-      margin-top: 1.7em;
     }
   </style>
 </Page>
