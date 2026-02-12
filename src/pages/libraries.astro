@@ -8,6 +8,10 @@ import Page from "$layouts/Page.astro";
 
   <script>
     import Chart from "chart.js/auto";
+    import type {
+      ChartConfiguration,
+      ChartConfigurationCustomTypesPerDataset,
+    } from "chart.js";
     import * as v from "valibot";
 
     const ROBOTO_MONO = { family: "'Roboto Mono', monospace", size: 13 };
@@ -38,15 +42,17 @@ import Page from "$layouts/Page.astro";
         tooltip: {
           bodyFont: ROBOTO_MONO,
           callbacks: {
-            label: (ctx: any) =>
-              ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
+            label: (ctx) => ctx.dataset.label! + ": " + ctx.parsed.x.toFixed(2),
           },
         },
       },
       responsive: true,
       maintainAspectRatio: false,
       font: ROBOTO_MONO,
-    } as const;
+    } as const satisfies (
+      | ChartConfiguration<"bar", number[], string>
+      | ChartConfigurationCustomTypesPerDataset<"bar", number[], string>
+    )["options"] & {};
 
     const createDetails = (
       root: HTMLElement,
@@ -60,7 +66,7 @@ import Page from "$layouts/Page.astro";
         {
           const header = document.createElement("h" + type);
           header.textContent = text;
-          header.id = `hd${type}${text.toLowerCase().replace(/[/ _]/g, "-")}`;
+          header.id = `hd${type}-${encodeURIComponent(text.toLowerCase()).replace(/%/g, "-")}`;
           summary.appendChild(header);
         }
         details.appendChild(summary);
@@ -83,33 +89,35 @@ import Page from "$layouts/Page.astro";
       if (v.is(ChartData, data)) {
         const section = document.createElement("section");
         section.className = "chart-container";
+        section.style.height = `calc(${6 * data.labels.length}rem)`;
 
-        const canvas = document.createElement("canvas");
-        section.appendChild(canvas);
-
-        section.style.minHeight = `${5 * data.labels.length}rem`;
-
-        // Lazy render
+        let chart: Chart | undefined;
         {
-          let chart: Chart;
-          let isRunning = false;
+          const canvas = document.createElement("canvas");
 
-          new IntersectionObserver((entries) => {
-            if (entries[0].isIntersecting) {
-              isRunning = true;
+          // Lazy render
+          {
+            let isRunning = false;
 
-              if (chart != null) chart.render();
-              else
-                chart = new Chart(canvas.getContext("2d")!, {
-                  type: "bar",
-                  data,
-                  options: OPTIONS,
-                });
-            } else if (isRunning) {
-              isRunning = false;
-              chart!.stop();
-            }
-          }).observe(canvas);
+            new IntersectionObserver((entries) => {
+              if (entries[0].isIntersecting) {
+                isRunning = true;
+
+                if (chart != null) chart.render();
+                else
+                  chart = new Chart(canvas.getContext("2d")!, {
+                    type: "bar",
+                    data,
+                    options: OPTIONS,
+                  });
+              } else if (isRunning) {
+                isRunning = false;
+                chart!.stop();
+              }
+            }).observe(canvas);
+          }
+
+          section.appendChild(canvas);
         }
 
         root.appendChild(section);
@@ -163,14 +171,14 @@ import Page from "$layouts/Page.astro";
       width: 92%;
       max-width: 100rem;
       margin: 20px auto 40px auto;
-      padding: 15px;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
       border-radius: 8px;
       text-align: center;
-    }
 
-    canvas {
-      display: inline-block;
+      canvas {
+        padding: 15px;
+        box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        display: inline-block;
+      }
     }
 
     summary::marker {

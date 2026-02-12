@@ -12,4 +12,4 @@ const loadResult = async (res: Response): Promise<Response> => {
 
 export const GET: APIRoute = () => result === null
   ? fetch("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json").then(loadResult)
-  : result.clone()
+  : result.clone();
