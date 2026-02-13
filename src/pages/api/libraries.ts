@@ -4,12 +4,13 @@ let result: Response | null = null;
 const clearResult = () => {
   result = null;
 };
-const loadResult = async (res: Response): Promise<Response> => {
+const loadResult = async (): Promise<Response> => {
+  const res = await fetch("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json");
   result = new Response(await res.text());
-  setTimeout(clearResult, 5000);
+  setTimeout(clearResult, 10000);
   return result.clone();
 }
 
 export const GET: APIRoute = () => result === null
-  ? fetch("https://raw.githubusercontent.com/js-benchmark-all/startup-size/refs/heads/dev/result.json").then(loadResult)
+  ? loadResult()
   : result.clone();
